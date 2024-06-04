@@ -118,7 +118,8 @@
             drawClock();
 
             const now = new Date();
-            let hour = now.getHours();
+            let hour = (now.getHours() % 24) + (now.getMinutes() / 60);
+            const minute = now.getMinutes();
             const second = now.getSeconds();
             const millisecond = now.getMilliseconds();
 
