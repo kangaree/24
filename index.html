@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>24-Hour Clock</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+        }
+        canvas {
+            background-color: #ffffff;
+            border: 2px solid #000000;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="clock" width="400" height="400"></canvas>
+    <script src="suncalc.js"></script>
+    <script>
+        const canvas = document.getElementById('clock');
+        const ctx = canvas.getContext('2d');
+        const radius = canvas.width / 2;
+        ctx.translate(radius, radius);
+
+        let lat = 40.7128;  // Default latitude (New York City)
+        let lon = -74.0060; // Default longitude (New York City)
+
+        // Function to fetch user's location based on IP address
+        function fetchLocation() {
+            fetch('https://ipapi.co/json/')
+                .then(response => response.json())
+                .then(data => {
+                    lat = data.latitude;
+                    lon = data.longitude;
+                    init();
+                })
+                .catch(error => {
+                    console.error('Error fetching location:', error);
+                    init();
+                });
+        }
+
+        const times = SunCalc.getTimes(new Date(), lat, lon);
+        const sunrise = times.sunrise;
+        const sunset = times.sunset;
+
+        function drawClock() {
+            drawDayNight(ctx, radius, sunrise, sunset);
+            drawFace(ctx, radius);
+            drawNumbers(ctx, radius);
+        }
+
+        function drawDayNight(ctx, radius, sunrise, sunset) {
+            const startAngle = ((sunrise.getHours() + sunrise.getMinutes() / 60) / 24) * 2 * Math.PI - Math.PI / 2;
+            const endAngle = ((sunset.getHours() + sunset.getMinutes() / 60) / 24) * 2 * Math.PI - Math.PI / 2;
+
+            // Draw night time (from end of sunset to start of sunrise)
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, endAngle, startAngle);
+            ctx.lineTo(0, 0);
+            ctx.fillStyle = '#2c3e50';
+            ctx.fill();
+
+            // Draw day time (from start of sunrise to end of sunset)
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, startAngle, endAngle);
+            ctx.lineTo(0, 0);
+            ctx.fillStyle = '#f39c12';
+            ctx.fill();
+        }
+
+        function drawFace(ctx, radius) {
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+            ctx.fillStyle = 'transparent';
+            ctx.fill();
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 0.1, 0, 2 * Math.PI);
+            ctx.fillStyle = '#000000';
+            ctx.fill();
+        }
+
+        function drawNumbers(ctx, radius) {
+            let ang;
+            let num;
+            ctx.font = radius * 0.15 + "px arial";
+            ctx.textBaseline = "middle";
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#ffffff";
+            for (num = 1; num <= 24; num++) {
+                ang = num * Math.PI / 12;
+                ctx.rotate(ang);
+                ctx.translate(0, -radius * 0.85);
+                ctx.rotate(-ang);
+                ctx.fillText(num.toString(), 0, 0);
+                ctx.rotate(ang);
+                ctx.translate(0, radius * 0.85);
+                ctx.rotate(-ang);
+            }
+        }
+
+        function drawTime(ctx, radius) {
+            // Clear the canvas
+            ctx.clearRect(-radius, -radius, canvas.width, canvas.height);
+
+            // Redraw the clock
+            drawClock();
+
+            const now = new Date();
+            let hour = now.getHours();
+            const second = now.getSeconds();
+            const millisecond = now.getMilliseconds();
+
+            // Hour
+            hour = hour % 24;
+            hour = (hour * Math.PI / 12);
+            drawHand(ctx, hour, radius * 0.5, radius * 0.07);
+
+            // Second
+            const secondAngle = (second * Math.PI / 30) + (millisecond * Math.PI / (30 * 1000));
+            drawHand(ctx, secondAngle, radius * 0.9, radius * 0.02);
+
+            // Request the next frame
+            requestAnimationFrame(() => drawTime(ctx, radius));
+        }
+
+        function drawHand(ctx, pos, length, width) {
+            ctx.beginPath();
+            ctx.lineWidth = width;
+            ctx.lineCap = "round";
+            ctx.moveTo(0, 0);
+            ctx.rotate(pos);
+            ctx.lineTo(0, -length);
+            ctx.stroke();
+            ctx.rotate(-pos);
+        }
+
+        function init() {
+            drawClock();
+            requestAnimationFrame(() => drawTime(ctx, radius));
+        }
+
+        // Fetch location and initialize clock
+        fetchLocation();
+    </script>
+</body>
+</html>
